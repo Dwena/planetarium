@@ -8,6 +8,9 @@ from pyspark.ml.feature import VectorAssembler
 spark = SparkSession.builder \
     .appName("Planetarium") \
     .config("spark.master", "local[*]") \
+	.config("spark.sql.catalogImplementation", "hive") \
+	.config("hive.metastore.uris", "thrift://hive-metastore:9083") \
+    .enableHiveSupport() \
     .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.1") \
     .getOrCreate()
 model_path = "bestmodel/"
@@ -88,16 +91,81 @@ def prediction_model(input_data):
     assembler = VectorAssembler(inputCols=all_columns, outputCol="selectedFeatures")
     assembled_data = assembler.transform(preprocessed_data)
     predictions = model.transform(assembled_data)
-    print("ALLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
     return predictions
 
 def process_batch(batch_df):
     predictions = prediction_model(batch_df)
     predictions.show()
 
+spark.sql("SHOW DATABASES").show()
+
+spark.sql("CREATE DATABASE IF NOT EXISTS planets")
+
+spark.sql("USE planets")
+
+spark.sql("""     
+    CREATE TABLE IF NOT EXISTS planets_data (
+        P_NAME STRING,
+        P_DETECTION STRING,
+        P_DISCOVERY_FACILITY STRING,
+        P_YEAR INT,
+        P_UPDATE DATE,
+        P_MASS DOUBLE,
+        P_MASS_ERROR_MIN DOUBLE,
+        P_MASS_ERROR_MAX DOUBLE,
+        P_MASS_LIMIT INT,
+        P_MASS_ORIGIN STRING,
+        P_RADIUS DOUBLE,
+        P_RADIUS_ERROR_MIN DOUBLE,
+        P_RADIUS_ERROR_MAX DOUBLE,
+        P_RADIUS_LIMIT INT,
+        P_PERIOD DOUBLE,
+        P_PERIOD_ERROR_MIN DOUBLE,
+        P_PERIOD_ERROR_MAX DOUBLE,
+        P_PERIOD_LIMIT INT,
+        P_SEMI_MAJOR_AXIS DOUBLE,
+        P_SEMI_MAJOR_AXIS_ERROR_MIN DOUBLE,
+        P_SEMI_MAJOR_AXIS_ERROR_MAX DOUBLE,
+        P_SEMI_MAJOR_AXIS_LIMIT INT,
+        P_ECCENTRICITY DOUBLE,
+        P_INCLINATION DOUBLE,
+        P_INCLINATION_ERROR_MIN DOUBLE,
+        P_INCLINATION_ERROR_MAX DOUBLE,
+        P_INCLINATION_LIMIT INT,
+        S_NAME STRING,
+        S_TYPE STRING,
+        S_RA DOUBLE,
+        S_DEC DOUBLE,
+        S_MAG DOUBLE,
+        S_DISTANCE DOUBLE,
+        S_TEMPERATURE DOUBLE,
+        S_MASS DOUBLE,
+        S_RADIUS DOUBLE,
+        S_METALLICITY DOUBLE,
+        S_AGE DOUBLE,
+        S_LOG_LUM DOUBLE,
+        S_HZ_OPT_MAX DOUBLE,
+        S_HZ_CON_MIN DOUBLE,
+        S_HZ_CON_MAX DOUBLE,
+        S_SNOW_LINE DOUBLE,
+        S_ABIO_ZONE DOUBLE,
+        S_TIDAL_LOCK DOUBLE,
+        P_HABZONE_OPT INT,
+        P_HABZONE_CON INT,
+        P_TYPE_TEMP STRING,
+        P_HABITABLE INT,
+        P_ESI DOUBLE,
+        S_CONSTELLATION STRING,
+        S_CONSTELLATION_ABR STRING,
+        S_CONSTELLATION_ENG STRING
+    )
+    USING hive
+""")
 
 df.writeStream \
   .foreachBatch(lambda batch_df, batch_id: process_batch(batch_df)) \
-  .start() \
+  .outputMode("append") \
+  .option("checkpointLocation", "/tmp/planets_data_checkpoint") \
+  .start('planets.planets_data') \
   .awaitTermination()
 
