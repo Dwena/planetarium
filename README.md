@@ -31,34 +31,46 @@ To get started with Planetarium, follow these steps:
 
 ## Usage
 
+Save data in Hadoop
+
+You need to have the data in your shared environnement as specified in the docker-compose file, here the folder is 'myhadoop'
+
+``` bash
+docker exec -it namenode /bin/bash
+hdfs dfs -mkdir /planetarium
+hdfs dfs -put /data/hwc.csv /planetarium
+```
+![plot](./image-readme/hdfs%20dossier.png)
+
+![plot](./image-readme/hdfs%20hwc.png)
+
 start kafka
 
 ``` bash
 docker exec -it kafka/bin/bash
-sh kafka-console-producer.sh --bootstrap-server kafka:9092 --topic topic2
+sh kafka-console-producer.sh --bootstrap-server kafka:9092 --topic topic1
 ```
+
+![plot](./image-readme/kafka.png)
 
 start consumer
 
 ``` bash
-docker exec -it spark-master /bin/bash
-python3 /app/scriptStreaming.py
+docker exec -it python-spark /bin/bash
+python3 /consumer/consumer.py
 ```
+
+![plot](./image-readme/consumer.png)
 
 start producer
 
 ``` bash
-docker exec -it namenode /bin/bash
-python3 /backend/app.py
+docker exec -it flask-app /bin/bash
+python3 /flaskapp/producer.py
 ```
 
-data save
+![plot](./image-readme/producer.png)
 
-``` bash
-hdfs dfs -mkdir /sismique
-hdfs dfs -put /data/dataset_sismique.csv /sismique
-hdfs dfs -put /data/dataset_sismique_villes.csv /sismique
-```
 
 ## Contributing
 

@@ -165,6 +165,7 @@ spark.sql("""
 df.writeStream \
   .foreachBatch(lambda batch_df, batch_id: process_batch(batch_df)) \
   .outputMode("append") \
+  .format("hive") \
   .option("checkpointLocation", "/tmp/planets_data_checkpoint") \
   .start('planets.planets_data') \
   .awaitTermination()
